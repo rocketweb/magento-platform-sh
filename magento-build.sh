@@ -3,12 +3,12 @@
 #
 # Allow to cp dot files easily
 #
-#shopt -s dotglob
+shopt -s dotglob
 
 #
 # Read read-write directories (Unix)
 #
-#readarray -t  dirs < .platform-read-write-dirs
+readarray -t  dirs < .platform-read-write-dirs
 
 #
 # Read read-write directories (OS X)
@@ -18,12 +18,13 @@
 #done < <(grep "" .platform-read-write-dirs)
 
 
-# move files away.
-# loop through array(dirs)
-#for dir in "${dirs[@]}"
-#do
-#    mkdir -p ../init/$dir
-#    cp -R $dir/* ../init/$dir/
-#    rm -rf $dir
-#    mkdir $dir
-#done
+#
+# Move directories away
+#
+for dir in "${dirs[@]}"
+do
+    mkdir -p ../init/$dir
+    cp -R $dir/* ../init/$dir/
+    rm -rf $dir
+    mkdir $dir
+done

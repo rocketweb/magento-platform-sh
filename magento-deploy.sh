@@ -3,12 +3,12 @@
 #
 # Allow to cp dot files easily
 #
-#shopt -s dotglob
+shopt -s dotglob
 
 #
 # Read read-write directories (Unix)
 #
-#readarray -t  dirs < .platform-read-write-dirs
+readarray -t  dirs < .platform-read-write-dirs
 
 #
 # Read read-write directories (OS X)
@@ -18,18 +18,18 @@
 #done < <(grep "" .platform-read-write-dirs)
 
 #
-# Copy directories
+# Copy directories back
 #
-#for dir in "${dirs[@]}"
-#do
-#    cp -R ../init/$dir/* $dir/ || true
-#    echo "Copied directory: $dir"
-#done
+for dir in "${dirs[@]}"
+do
+    cp -R ../init/$dir/* $dir/ || true
+    echo "Copied directory: $dir"
+done
 
 #
 # Remove directory
 #
-#rm -rf ../init/*
+rm -rf ../init/*
 
 #
 # Prepare data needed to install Magento
