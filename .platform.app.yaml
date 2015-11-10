@@ -45,7 +45,8 @@ hooks:
     deploy: |
         cd ~//public
         /bin/bash ./magento-deploy.sh
-#crons:
-#    drupal:
-#        spec: "*/20 * * * *"
-#        cmd: "cd public ; drush core-cron"
+# Default Magento cron job
+crons:
+    mymagento:
+        spec: "*/1 * * * *"
+        cmd: "cd public ; sh cron.sh"
