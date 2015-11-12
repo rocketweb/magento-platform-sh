@@ -1,6 +1,28 @@
 #!/bin/bash
 
 #
+# Prepare data needed to install Magento
+#
+
+echo "Preparing environment specific data."
+
+URL=`php -r '$routes=json_decode(base64_decode($_ENV["PLATFORM_ROUTES"]), true);foreach($routes as $key => $val){if(strpos($key,"http://")===0 && $val["type"]==="upstream"){echo $key;break;}}'`
+URL_SSL=`php -r '$routes=json_decode(base64_decode($_ENV["PLATFORM_ROUTES"]), true);foreach($routes as $key => $val){if(strpos($key,"https://")===0 && $val["type"]==="upstream"){echo $key;break;}}'`
+
+DB_HOST=`php -r 'echo json_decode(base64_decode($_ENV["PLATFORM_RELATIONSHIPS"]), true)["database"][0]["host"];'`
+DB_NAME=`php -r 'echo json_decode(base64_decode($_ENV["PLATFORM_RELATIONSHIPS"]), true)["database"][0]["path"];'`
+DB_USER=`php -r 'echo json_decode(base64_decode($_ENV["PLATFORM_RELATIONSHIPS"]), true)["database"][0]["username"];'`
+#DB_PASS=''
+
+ADMIN_USERNAME=`php -r '$var=json_decode(base64_decode($_ENV["PLATFORM_VARIABLES"]), true);echo isset($var["ADMIN_USERNAME"])?$var["ADMIN_USERNAME"]:"admin";'`
+ADMIN_FIRSTNAME=`php -r '$var=json_decode(base64_decode($_ENV["PLATFORM_VARIABLES"]), true);echo isset($var["ADMIN_FIRSTNAME"])?$var["ADMIN_FIRSTNAME"]:"John";'`
+ADMIN_LASTNAME=`php -r '$var=json_decode(base64_decode($_ENV["PLATFORM_VARIABLES"]), true);echo isset($var["ADMIN_LASTNAME"])?$var["ADMIN_LASTNAME"]:"Doe";'`
+ADMIN_EMAIL=`php -r '$var=json_decode(base64_decode($_ENV["PLATFORM_VARIABLES"]), true);echo isset($var["ADMIN_EMAIL"])?$var["ADMIN_EMAIL"]:"john@example.com";'`
+ADMIN_PASSWORD=`php -r '$var=json_decode(base64_decode($_ENV["PLATFORM_VARIABLES"]), true);echo isset($var["ADMIN_PASSWORD"])?$var["ADMIN_PASSWORD"]:"admin12";'`
+
+DEFAULT_CURRENCY='USD'
+
+#
 # Allow to cp dot files easily
 #
 shopt -s dotglob
@@ -30,28 +52,6 @@ done
 # Remove directory
 #
 rm -rf ../init/*
-
-#
-# Prepare data needed to install Magento
-#
-
-echo "Preparing environment specific data."
-
-URL=`php -r '$routes=json_decode(base64_decode($_ENV["PLATFORM_ROUTES"]), true);foreach($routes as $key => $val){if(strpos($key,"http://")===0 && $val["type"]==="upstream"){echo $key;break;}}'`
-URL_SSL=`php -r '$routes=json_decode(base64_decode($_ENV["PLATFORM_ROUTES"]), true);foreach($routes as $key => $val){if(strpos($key,"https://")===0 && $val["type"]==="upstream"){echo $key;break;}}'`
-
-DB_HOST=`php -r 'echo json_decode(base64_decode($_ENV["PLATFORM_RELATIONSHIPS"]), true)["database"][0]["host"];'`
-DB_NAME=`php -r 'echo json_decode(base64_decode($_ENV["PLATFORM_RELATIONSHIPS"]), true)["database"][0]["path"];'`
-DB_USER=`php -r 'echo json_decode(base64_decode($_ENV["PLATFORM_RELATIONSHIPS"]), true)["database"][0]["username"];'`
-#DB_PASS=''
-
-ADMIN_USERNAME=`php -r '$var=json_decode(base64_decode($_ENV["PLATFORM_VARIABLES"]), true);echo isset($var["ADMIN_USERNAME"])?$var["ADMIN_USERNAME"]:"admin";'`
-ADMIN_FIRSTNAME=`php -r '$var=json_decode(base64_decode($_ENV["PLATFORM_VARIABLES"]), true);echo isset($var["ADMIN_FIRSTNAME"])?$var["ADMIN_FIRSTNAME"]:"John";'`
-ADMIN_LASTNAME=`php -r '$var=json_decode(base64_decode($_ENV["PLATFORM_VARIABLES"]), true);echo isset($var["ADMIN_LASTNAME"])?$var["ADMIN_LASTNAME"]:"Doe";'`
-ADMIN_EMAIL=`php -r '$var=json_decode(base64_decode($_ENV["PLATFORM_VARIABLES"]), true);echo isset($var["ADMIN_EMAIL"])?$var["ADMIN_EMAIL"]:"john@example.com";'`
-ADMIN_PASSWORD=`php -r '$var=json_decode(base64_decode($_ENV["PLATFORM_VARIABLES"]), true);echo isset($var["ADMIN_PASSWORD"])?$var["ADMIN_PASSWORD"]:"admin12";'`
-
-DEFAULT_CURRENCY='USD'
 
 if [ ! -f app/etc/local.xml ]; 
 then
