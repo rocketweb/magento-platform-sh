@@ -100,8 +100,16 @@ else
     #
     echo "Updating database configuration."
 
+    #
+    # Update site URLs
+    #
     mysql -u user -h $DB_HOST -e "update core_config_data set value = '$URL' where path = 'web/unsecure/base_url' and scope_id = '0';" $DB_NAME
     mysql -u user -h $DB_HOST -e "update core_config_data set value = '$URL_SSL' where path = 'web/secure/base_url' and scope_id = '0';" $DB_NAME
+
+    #
+    # Update admin credentials
+    #
+    mysql -u user -h $DB_HOST -e "update admin_user set firstname = '$ADMIN_FIRSTNAME', lastname = '$ADMIN_LASTNAME', email = '$ADMIN_EMAIL', username = '$ADMIN_USERNAME', password = md5('$ADMIN_PASSWORD') where user_id = '1';" $DB_NAME
 
     #
     # Clear cache
