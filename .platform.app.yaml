@@ -29,6 +29,7 @@ web:
         # CSS and Javascript.
         - \.css$
         - \.js$
+        - \.map$
         - \.hbs$
 
          # image/* types.
@@ -80,6 +81,10 @@ web:
         - \.eot$
         - \.woff$
         - \.otf$
+
+        # document types
+        - \.htm$
+        - \.html$
 
         # robots.txt.
         - /robots\.txt$

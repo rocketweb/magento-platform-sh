@@ -49,9 +49,9 @@ do
 done
 
 #
-# Remove directory
+# Remove directory (can't do this as file system is not readable at this point)
 #
-rm -rf ../init/*
+#rm -rf ../init/*
 
 if [ ! -f app/etc/local.xml ]; 
 then

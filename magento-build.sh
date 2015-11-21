@@ -17,6 +17,10 @@ readarray -t  dirs < .platform-read-write-dirs
 #    dirs+=($dir)
 #done < <(grep "" .platform-read-write-dirs)
 
+#
+# Clean temp init directory
+#
+rm -rf ../init/*
 
 #
 # Move directories away
