@@ -17,7 +17,9 @@ build:
 relationships:
     database: "mysql:mysql"
     solr: "solr:solr"
-    redis: "redis:redis"
+    rediscache: "rediscache:redis"
+    redisfpc: "redisfpc:redis"
+    redissession: "redissession:redis"
 
 # The configuration of app when it is exposed to the web.
 web:
@@ -103,11 +105,11 @@ hooks:
     # We run build hooks before your application has been packaged.
     build: |
         cd ~/public
-        /bin/bash ./magento-build.sh
+        /usr/bin/php ./magento-build.php
     # We run deploy hook after your application has been deployed and started.
     deploy: |
         cd ~//public
-        /bin/bash ./magento-deploy.sh
+        /usr/bin/php ./magento-deploy.php
 # Default Magento cron job
 crons:
     mymagento:
