@@ -6,7 +6,3 @@
 "http://{default}/":
     type: upstream
     upstream: "mymagento:php"
-
-"http://www.{default}/":
-    type: redirect
-    to: "http://{default}/"

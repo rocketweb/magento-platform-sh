@@ -2,10 +2,16 @@
 
 class Platformsh
 {
+    const MAGIC_ROUTE = '{default}';
+
+    const PREFIX_SECURE = 'https://';
+    const PREFIX_UNSECURE = 'http://';
+
+    protected $debugMode = false;
+
     protected $platformReadWriteDirs = ['var', 'app/etc', 'media'];
-    
-    protected $urlUnsecure = '';
-    protected $urlSecure = '';
+
+    protected $urls = ['unsecure' => [], 'secure' => []];
 
     protected $defaultCurrency = 'USD';
 
@@ -39,25 +45,12 @@ class Platformsh
      */
     public function init()
     {
-        echo "Preparing environment specific data." . PHP_EOL;
+        $this->log("Preparing environment specific data.");
 
-        $routes = $this->getRoutes();
+        $this->initRoutes();
+
         $relationships = $this->getRelationships();
         $var = $this->getVariables();
-
-        foreach($routes as $key => $val) {
-            if(strpos($key,"http://")===0 && $val["type"]==="upstream"){
-                $this->urlUnsecure = $key;
-                break;
-            }
-        }
-
-        foreach($routes as $key => $val){
-            if(strpos($key,"https://")===0 && $val["type"]==="upstream") {
-                $this->urlSecure = $key;
-                break;
-            }
-        }
 
         $this->dbHost = $relationships["database"][0]["host"];
         $this->dbName = $relationships["database"][0]["path"];
@@ -82,29 +75,58 @@ class Platformsh
         $this->redisSessionPort = $relationships['redissession'][0]['port'];
     }
 
+    /**
+     * Parse Platform.sh routes to more readable format.
+     */
+    public function initRoutes()
+    {
+        $routes = $this->getRoutes();
+
+        foreach($routes as $key => $val) {
+            if ($val["type"] !== "upstream") {
+                continue;
+            }
+
+            $urlParts = parse_url($val['original_url']);
+            $originalUrl = str_replace(self::MAGIC_ROUTE, '', $urlParts['host']);
+
+            if(strpos($key, self::PREFIX_UNSECURE) === 0) {
+                $this->urls['unsecure'][$originalUrl] = $key;
+                continue;
+            }
+
+            if(strpos($key, self::PREFIX_SECURE) === 0) {
+                $this->urls['secure'][$originalUrl] = $key;
+                continue;
+            }
+        }
+    }
+
+    /**
+     * Build application: clear temp directory and move writable directories content to temp.
+     */
     public function build()
     {
         $this->clearTemp();
 
-        // Move directories away
         foreach ($this->platformReadWriteDirs as $dir) {
-            exec(sprintf('mkdir -p ../init/%s', $dir));
-            exec(sprintf('/bin/bash -c "shopt -s dotglob; cp -R %s/* ../init/%s/"', $dir, $dir));
-            exec(sprintf('rm -rf %s', $dir));
-            exec(sprintf('mkdir %s', $dir));
+            $this->execute(sprintf('mkdir -p ../init/%s', $dir));
+            $this->execute(sprintf('/bin/bash -c "shopt -s dotglob; cp -R %s/* ../init/%s/"', $dir, $dir));
+            $this->execute(sprintf('rm -rf %s', $dir));
+            $this->execute(sprintf('mkdir %s', $dir));
         }
     }
 
+    /**
+     * Deploy application: copy writable directories back, install or update Magento data.
+     */
     public function deploy()
     {
         // Copy read-write directories back
         foreach ($this->platformReadWriteDirs as $dir) {
-            exec(sprintf('/bin/bash -c "shopt -s dotglob; cp -R ../init/%s/* %s/ || true"', $dir, $dir));
-            echo sprintf('Copied directory: %s', $dir) . PHP_EOL;
+            $this->execute(sprintf('/bin/bash -c "shopt -s dotglob; cp -R ../init/%s/* %s/ || true"', $dir, $dir));
+            $this->log(sprintf('Copied directory: %s', $dir));
         }
-
-        // Remove directory (can't do this as file system is not readable at this point)
-        //$this->clearTemp();
 
         if (!file_exists('app/etc/local.xml')) {
             $this->installMagento();
@@ -114,6 +136,8 @@ class Platformsh
     }
 
     /**
+     * Get routes information from Platform.sh environment variable.
+     *
      * @return mixed
      */
     protected function getRoutes()
@@ -122,6 +146,8 @@ class Platformsh
     }
 
     /**
+     * Get relationships information from Platform.sh environment variable. 
+     *
      * @return mixed
      */
     protected function getRelationships()
@@ -130,6 +156,8 @@ class Platformsh
     }
 
     /**
+     * Get custom variables from Platform.sh environment variable.
+     *
      * @return mixed
      */
     protected function getVariables()
@@ -142,13 +170,16 @@ class Platformsh
      */
     protected function installMagento()
     {
-        echo "File local.xml does not exist. Installing Magento." . PHP_EOL;
+        $this->log("File local.xml does not exist. Installing Magento.");
 
-        exec(
+        $urlUnsecure = $this->urls['unsecure'][''];
+        $urlSecure = $this->urls['secure'][''];
+
+        $this->execute(
             "php -f install.php -- \
             --default_currency $this->defaultCurrency \
-            --url $this->urlUnsecure \
-            --secure_base_url $this->urlSecure \
+            --url $urlUnsecure \
+            --secure_base_url $urlSecure \
             --skip_url_validation 'yes' \
             --license_agreement_accepted 'yes' \
             --locale 'en_US' \
@@ -164,9 +195,9 @@ class Platformsh
             --admin_firstname $this->adminFirstname \
             --admin_lastname $this->adminLastname \
             --admin_email $this->adminEmail \
-            --admin_password $this->adminPassword",
-            $this->lastOutput, 
-            $this->lastStatus
+            --admin_password $this->adminPassword"//,
+            //$this->lastOutput, 
+            //$this->lastStatus
         );
     }
 
@@ -175,25 +206,44 @@ class Platformsh
      */
     protected function updateMagento()
     {
-        echo "File local.xml exists." . PHP_EOL;
+        $this->log("File local.xml exists.");
 
         $this->updateConfiguration();
 
         $this->updateDatabaseConfiguration();
+        
+        $this->updateUrls();
 
         $this->clearCache();
     }
 
+    /**
+     * Update admin credentials
+     */
     protected function updateDatabaseConfiguration()
     {
-        echo "Updating database configuration." . PHP_EOL;
+        $this->log("Updating database configuration.");
 
-        // Update site URLs
-        exec("mysql -u user -h $this->dbHost -e \"update core_config_data set value = '$this->urlUnsecure' where path = 'web/unsecure/base_url' and scope_id = '0';\" $this->dbName");
-        exec("mysql -u user -h $this->dbHost -e \"update core_config_data set value = '$this->urlSecure' where path = 'web/secure/base_url' and scope_id = '0';\" $this->dbName");
+        $this->execute("mysql -u user -h $this->dbHost -e \"update admin_user set firstname = '$this->adminFirstname', lastname = '$this->adminLastname', email = '$this->adminEmail', username = '$this->adminUsername', password = md5('$this->adminPassword') where user_id = '1';\" $this->dbName");
+    }
 
-        // Update admin credentials
-        exec("mysql -u user -h $this->dbHost -e \"update admin_user set firstname = '$this->adminFirstname', lastname = '$this->adminLastname', email = '$this->adminEmail', username = '$this->adminUsername', password = md5('$this->adminPassword') where user_id = '1';\" $this->dbName");
+    /**
+     * Update secure and unsecure URLs 
+     */
+    protected function updateUrls()
+    {
+        foreach ($this->urls as $urlType => $urls) {
+            foreach ($urls as $route => $url) {
+                $prefix = 'unsecure' === $urlType ? self::PREFIX_UNSECURE : self::PREFIX_SECURE;
+                if (!strlen($route)) {
+                    $this->execute("mysql -u user -h $this->dbHost -e \"update core_config_data set value = '$url' where path = 'web/$urlType/base_url' and scope_id = '0';\" $this->dbName");
+                    continue;
+                }
+                $likeKey = $prefix . $route . '%';
+                $likeKeyParsed = $prefix . str_replace('.', '---', $route) . '%';
+                $this->execute("mysql -u user -h $this->dbHost -e \"update core_config_data set value = '$url' where path = 'web/$urlType/base_url' and (value like '$likeKey' or value like '$likeKeyParsed');\" $this->dbName");
+            }
+        }
     }
 
     /**
@@ -201,16 +251,18 @@ class Platformsh
      */
     protected function clearTemp()
     {
-        exec('rm -rf ../init/*');
+        $this->execute('rm -rf ../init/*');
     }
 
     /**
      * Clear Magento file based cache
+     *
+     * @todo think about way to clean redis cache.
      */
     protected function clearCache()
     {
-        echo "Clearing cache." . PHP_EOL;
-        exec('rm -rf var/cache/* var/full_page_cache/* media/css/* media/js/*');
+        $this->log("Clearing cache.");
+        $this->execute('rm -rf var/cache/* var/full_page_cache/* media/css/* media/js/*');
     }
 
     /**
@@ -218,7 +270,7 @@ class Platformsh
      */
     protected function updateConfiguration()
     {
-        echo "Updating local.xml configuration." . PHP_EOL;
+        $this->log("Updating local.xml configuration.");
 
         $configFileName = "app/etc/local.xml";
 
@@ -247,5 +299,18 @@ class Platformsh
         }
 
         $config->saveXML($configFileName);
+    }
+
+    protected function log($message)
+    {
+        echo $message . PHP_EOL;
+    }
+
+    protected function execute($command)
+    {
+        if ($this->debugMode) {
+            $this->log($command);
+        }
+        exec($command);
     }
 }
