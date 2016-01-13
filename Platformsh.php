@@ -37,6 +37,11 @@ class Platformsh
     protected $redisSessionScheme;
     protected $redisSessionPort;
 
+    protected $solrHost;
+    protected $solrPath;
+    protected $solrPort;
+    protected $solrScheme;
+
     protected $lastOutput = array();
     protected $lastStatus = null;
 
@@ -73,6 +78,11 @@ class Platformsh
         $this->redisSessionHost = $relationships['redissession'][0]['host'];
         $this->redisSessionScheme = $relationships['redissession'][0]['scheme'];
         $this->redisSessionPort = $relationships['redissession'][0]['port'];
+
+        $this->solrHost = $relationships["solr"][0]["host"];
+        $this->solrPath = $relationships["solr"][0]["path"];
+        $this->solrPort = $relationships["solr"][0]["port"];
+        $this->solrScheme = $relationships["solr"][0]["scheme"];
     }
 
     /**
@@ -211,6 +221,8 @@ class Platformsh
         $this->updateConfiguration();
 
         $this->updateDatabaseConfiguration();
+
+        $this->updateSolrConfiguration();
         
         $this->updateUrls();
 
@@ -225,6 +237,19 @@ class Platformsh
         $this->log("Updating database configuration.");
 
         $this->execute("mysql -u user -h $this->dbHost -e \"update admin_user set firstname = '$this->adminFirstname', lastname = '$this->adminLastname', email = '$this->adminEmail', username = '$this->adminUsername', password = md5('$this->adminPassword') where user_id = '1';\" $this->dbName");
+    }
+
+    /**
+     * Update SOLR configuration
+     */
+    protected function updateSolrConfiguration()
+    {
+        $this->log("Updating SOLR configuration.");
+
+        $this->execute("mysql -u user -h $this->dbHost -e \"update core_config_data set value = '$this->solrHost' where path = 'catalog/search/solr_server_hostname' and scope_id = '0';\" $this->dbName");
+        $this->execute("mysql -u user -h $this->dbHost -e \"update core_config_data set value = '$this->solrPort' where path = 'catalog/search/solr_server_port' and scope_id = '0';\" $this->dbName");
+        $this->execute("mysql -u user -h $this->dbHost -e \"update core_config_data set value = '$this->solrScheme' where path = 'catalog/search/solr_server_username' and scope_id = '0';\" $this->dbName");
+        $this->execute("mysql -u user -h $this->dbHost -e \"update core_config_data set value = '$this->solrPath' where path = 'catalog/search/solr_server_path' and scope_id = '0';\" $this->dbName");
     }
 
     /**
@@ -311,6 +336,11 @@ class Platformsh
         if ($this->debugMode) {
             $this->log($command);
         }
-        exec($command);
+        exec(
+            $command//,
+            //$this->lastOutput,
+            //$this->lastStatus
+        );
+        // @todo maybe log output in debug mode
     }
 }
