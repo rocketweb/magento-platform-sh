@@ -90,6 +90,8 @@ class Platformsh
      */
     public function initRoutes()
     {
+        $this->log("Initializing routes.");
+
         $routes = $this->getRoutes();
 
         foreach($routes as $key => $val) {
@@ -117,7 +119,11 @@ class Platformsh
      */
     public function build()
     {
+        $this->log("Start build.");
+
         $this->clearTemp();
+
+        $this->log("Copying read/write directories to temp directory.");
 
         foreach ($this->platformReadWriteDirs as $dir) {
             $this->execute(sprintf('mkdir -p ../init/%s', $dir));
@@ -132,7 +138,10 @@ class Platformsh
      */
     public function deploy()
     {
-        // Copy read-write directories back
+        $this->log("Start deploy.");
+
+        $this->log("Copying read/write directories back.");
+
         foreach ($this->platformReadWriteDirs as $dir) {
             $this->execute(sprintf('/bin/bash -c "shopt -s dotglob; cp -R ../init/%s/* %s/ || true"', $dir, $dir));
             $this->log(sprintf('Copied directory: %s', $dir));
@@ -216,7 +225,7 @@ class Platformsh
      */
     protected function updateMagento()
     {
-        $this->log("File local.xml exists.");
+        $this->log("File local.xml exists. Updating configuration.");
 
         $this->updateConfiguration();
 
@@ -257,6 +266,8 @@ class Platformsh
      */
     protected function updateUrls()
     {
+        $this->log("Updating secure and unsecure URLs.");
+
         foreach ($this->urls as $urlType => $urls) {
             foreach ($urls as $route => $url) {
                 $prefix = 'unsecure' === $urlType ? self::PREFIX_UNSECURE : self::PREFIX_SECURE;
@@ -276,6 +287,8 @@ class Platformsh
      */
     protected function clearTemp()
     {
+        $this->log("Clearing temporary directory.");
+
         $this->execute('rm -rf ../init/*');
     }
 
@@ -287,6 +300,7 @@ class Platformsh
     protected function clearCache()
     {
         $this->log("Clearing cache.");
+
         $this->execute('rm -rf var/cache/* var/full_page_cache/* media/css/* media/js/*');
     }
 
@@ -295,20 +309,22 @@ class Platformsh
      */
     protected function updateConfiguration()
     {
-        $this->log("Updating local.xml configuration.");
+        $this->log("Updating local.xml database configuration.");
 
         $configFileName = "app/etc/local.xml";
 
         $config = simplexml_load_file($configFileName);
 
         $dbConfig = $config->xpath('/config/global/resources/default_setup/connection')[0];
-        $cacheBackend = $config->xpath('/config/global/cache/backend')[0];
+        $cacheBackend = $config->xpath('/config/global/cache/backend');
 
         $dbConfig->username = $this->dbUser;
         $dbConfig->host = $this->dbHost;
         $dbConfig->dbname = $this->dbName;
 
-        if ('Cm_Cache_Backend_Redis' == $cacheBackend) {
+        if (isset($cacheBackend[0]) && 'Cm_Cache_Backend_Redis' == $cacheBackend[0]) {
+            $this->log("Updating local.xml Redis configuration.");
+
             $cacheConfig = $config->xpath('/config/global/cache/backend_options')[0];
             $fpcConfig = $config->xpath('/config/global/full_page_cache/backend_options')[0];
             $sessionConfig = $config->xpath('/config/global/redis_session')[0];
