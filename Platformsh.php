@@ -25,17 +25,9 @@ class Platformsh
     protected $adminEmail;
     protected $adminPassword;
 
-    protected $redisCacheHost;
-    protected $redisCacheScheme;
-    protected $redisCachePort;
-
-    protected $redisFpcHost;
-    protected $redisFpcScheme;
-    protected $redisFpcPort;
-
-    protected $redisSessionHost;
-    protected $redisSessionScheme;
-    protected $redisSessionPort;
+    protected $redisHost;
+    protected $redisScheme;
+    protected $redisPort;
 
     protected $solrHost;
     protected $solrPath;
@@ -67,17 +59,9 @@ class Platformsh
         $this->adminEmail = isset($var["ADMIN_EMAIL"]) ? $var["ADMIN_EMAIL"] : "john@example.com";
         $this->adminPassword = isset($var["ADMIN_PASSWORD"]) ? $var["ADMIN_PASSWORD"] : "admin12";
 
-        $this->redisCacheHost = $relationships['rediscache'][0]['host'];
-        $this->redisCacheScheme = $relationships['rediscache'][0]['scheme'];
-        $this->redisCachePort = $relationships['rediscache'][0]['port'];
-
-        $this->redisFpcHost = $relationships['redisfpc'][0]['host'];
-        $this->redisFpcScheme = $relationships['redisfpc'][0]['scheme'];
-        $this->redisFpcPort = $relationships['redisfpc'][0]['port'];
-
-        $this->redisSessionHost = $relationships['redissession'][0]['host'];
-        $this->redisSessionScheme = $relationships['redissession'][0]['scheme'];
-        $this->redisSessionPort = $relationships['redissession'][0]['port'];
+        $this->redisHost = $relationships['redis'][0]['host'];
+        $this->redisScheme = $relationships['redis'][0]['scheme'];
+        $this->redisPort = $relationships['redis'][0]['port'];
 
         $this->solrHost = $relationships["solr"][0]["host"];
         $this->solrPath = $relationships["solr"][0]["path"];
@@ -329,14 +313,14 @@ class Platformsh
             $fpcConfig = $config->xpath('/config/global/full_page_cache/backend_options')[0];
             $sessionConfig = $config->xpath('/config/global/redis_session')[0];
 
-            $cacheConfig->port = $this->redisCachePort;
-            $cacheConfig->server = $this->redisCacheHost;
+            $cacheConfig->port = $this->redisPort;
+            $cacheConfig->server = $this->redisHost;
 
-            $fpcConfig->port = $this->redisFpcPort;
-            $fpcConfig->server = $this->redisFpcHost;
+            $fpcConfig->port = $this->redisPort;
+            $fpcConfig->server = $this->redisHost;
 
-            $sessionConfig->port = $this->redisSessionPort;
-            $sessionConfig->host = $this->redisSessionHost;
+            $sessionConfig->port = $this->redisPort;
+            $sessionConfig->host = $this->redisHost;
         }
 
         $config->saveXML($configFileName);
