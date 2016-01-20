@@ -18,6 +18,7 @@ class Platformsh
     protected $dbHost;
     protected $dbName;
     protected $dbUser;
+    protected $dbPassword;
 
     protected $adminUsername;
     protected $adminFirstname;
@@ -129,6 +130,7 @@ class Platformsh
         $this->dbHost = $relationships["database"][0]["host"];
         $this->dbName = $relationships["database"][0]["path"];
         $this->dbUser = $relationships["database"][0]["username"];
+        $this->dbPassword = $relationships["database"][0]["password"];
 
         $this->adminUsername = isset($var["ADMIN_USERNAME"]) ? $var["ADMIN_USERNAME"] : "admin";
         $this->adminFirstname = isset($var["ADMIN_FIRSTNAME"]) ? $var["ADMIN_FIRSTNAME"] : "John";
@@ -198,7 +200,7 @@ class Platformsh
             --db_host $this->dbHost \
             --db_name $this->dbName \
             --db_user $this->dbUser \
-            --db_pass '' \
+            --db_pass '$this->dbPassword' \
             --use_rewrites 'yes' \
             --use_secure 'yes' \
             --use_secure_admin 'yes' \
@@ -311,6 +313,7 @@ class Platformsh
         $dbConfig->username = $this->dbUser;
         $dbConfig->host = $this->dbHost;
         $dbConfig->dbname = $this->dbName;
+        $dbConfig->password = $this->dbPassword;
 
         if (isset($cacheBackend[0]) && 'Cm_Cache_Backend_Redis' == $cacheBackend[0]) {
             $this->log("Updating local.xml Redis configuration.");
